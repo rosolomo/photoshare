@@ -147,8 +147,14 @@ def register_user():
         return flask.redirect(flask.url_for("register"))
     cursor = conn.cursor()
     test = isEmailUnique(email)
+	# if email is unique
     if test:
         print(
+			# cursor.execute(
+            #     "INSERT INTO Users (email, password) VALUES ('{0}', '{1}')".format(
+            #         email, password
+            #     )
+            # )
             cursor.execute(
                 "INSERT INTO Users (email, password) VALUES ('{0}', '{1}')".format(
                     email, password
