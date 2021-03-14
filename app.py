@@ -89,11 +89,6 @@ def login():
 			   <form action='login' method='POST'>
 				<input type='text' name='email' id='email' placeholder='email'></input>
 				<input type='password' name='password' id='password' placeholder='password'></input>
-				<input type='text' name='first-name' id='first-name' placeholder='first name'></input>
-				<input type='text' name='last-name' id='last-name' placeholder='last name'></input>
-				<input type='date' name='birthday' id='birthday' placeholder='birthday'></input>
-				<input type='text' name='hometown' id='hometown' placeholder='hometown'></input>
-				<input type='gender' name='gender' id='gender' placeholder='gender'></input>
 				<input type='submit' name='submit'></input>
 			   </form></br>
 		   <a href='/'>Home</a>
@@ -101,6 +96,7 @@ def login():
     # The request method is POST (page is recieving data)
     email = flask.request.form["email"]
     cursor = conn.cursor()
+
     # check if email is registered
     if cursor.execute("SELECT password FROM Users WHERE email = '{0}'".format(email)):
         data = cursor.fetchall()
@@ -137,9 +133,13 @@ def register():
 
 @app.route("/register", methods=["POST"])
 def register_user():
+    # tests to see if all required fields (first,last names, password, email, dob) were filled
     try:
-        email = request.form.get("email")
-        password = request.form.get("password")
+		password = request.form.get("password")
+		email = request.form.get("email")
+		first_name = request.form.get("first-name")
+		last_name = request.form.get("last-name")
+		dob = request.form.get("birthday")
     except:
         print(
             "couldn't find all tokens"
