@@ -1,3 +1,7 @@
 Flask
+Flask-Login
 flask-mysql
-cryptography
+Flask-SQLAlchemy
+requests
+Werkzeug
+
