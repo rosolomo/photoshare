@@ -151,8 +151,8 @@ def register_user():
     if test:
         print(
 			# cursor.execute(
-            #     "INSERT INTO Users (email, password) VALUES ('{0}', '{1}')".format(
-            #         email, password
+            #     "INSERT INTO Users (user_id, first_name, last_name, email, password) VALUES ('{0}', '{1}','{2}','{3}')".format(
+            #         first_name, last_name, email, password
             #     )
             # )
             cursor.execute(
