@@ -135,11 +135,11 @@ def register():
 def register_user():
     # tests to see if all required fields (first,last names, password, email, dob) were filled
     try:
-		password = request.form.get("password")
-		email = request.form.get("email")
-		first_name = request.form.get("first-name")
-		last_name = request.form.get("last-name")
-		dob = request.form.get("birthday")
+        email = request.form.get("email")
+        password = request.form.get("password")
+        first_name = request.form.get("first-name")
+        last_name = request.form.get("last-name")
+        dob = request.form.get("birthday")
     except:
         print(
             "couldn't find all tokens"
@@ -147,10 +147,10 @@ def register_user():
         return flask.redirect(flask.url_for("register"))
     cursor = conn.cursor()
     test = isEmailUnique(email)
-	# if email is unique
+    # if email is unique
     if test:
         print(
-			# cursor.execute(
+            # cursor.execute(
             #     "INSERT INTO Users (user_id, first_name, last_name, email, password) VALUES ('{0}', '{1}','{2}','{3}')".format(
             #         first_name, last_name, email, password
             #     )
