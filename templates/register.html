@@ -14,19 +14,19 @@
     <div id="content">
         <form method="post" action="{{ url_for('register_user') }}">
             <label for="email">Enter your email:</label>
-            <input type="email" name="email" /><br />
+            <input type="email" name="email" placeholder="Email" required='true' /><br />
             <label for="password">Enter password:</label>
-            <input type="password" name="password" /><br />
+            <input type="password" name="password" placeholder="password" required='true' /><br />
             <label for="first-name">Enter your first name:</label>
-            <input type="first-name" name="first-name" /><br />
+            <input type="first-name" name="first-name" placeholder="Last Name" required='true' /><br />
             <label for="last-name">Enter your last name:</label>
-            <input type="last-name" name="last-name" /><br />
-            <label for="date">Enter your birthday:</label>
-            <input type="birthday" name="birthday" /><br />
-            <!-- <label for="hometown">Enter your hometown:</label>
-            <input type="hometown" name="hometown" /><br />
-            <label for="gender">Enter your gender:</label>
-            <input type="gender" name="gender" /><br /> -->
+            <input type="last-name" name="last-name" placeholder="Last Name" required='true' /><br />
+            <label for="date">Enter your birthday (not required):</label>
+            <input type="birthday" name="birthday" placeholder="format: 1994-12-12" /><br />
+            <label for="hometown">Enter your hometown (not required):</label>
+            <input type="hometown" name="hometown" placeholder="Hometown" /><br />
+            <label for="gender">Enter your gender(not required):</label>
+            <input type="gender" name="gender" placeholder="'female' or 'male'" /><br />
             <input type="submit" />
         </form>
     </div>
