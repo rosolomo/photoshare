@@ -23,7 +23,7 @@ app.secret_key = "super secret string"  # Change this!
 
 # These will need to be changed according to your creditionals
 app.config["MYSQL_DATABASE_USER"] = "root"
-app.config["MYSQL_DATABASE_PASSWORD"] = "#PASSWORD"
+app.config["MYSQL_DATABASE_PASSWORD"] = "trees"
 app.config["MYSQL_DATABASE_DB"] = "photoshare"
 app.config["MYSQL_DATABASE_HOST"] = "localhost"
 mysql.init_app(app)
@@ -299,6 +299,26 @@ def find_friends():
 
     return render_template("friends.html", name=first, friends=friends)
 
+def getName(uid):
+    cursor.execute(
+        "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
+            flask_login.current_user.id
+        )
+    )
+    return cursor.fetchone()[0]
+
+# All photos
+@app.route("/photos", methods=["GET", "POST"])
+# @flask_login.login_required
+def getAllPhotos():
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT data, photo_id, caption FROM Photos".format()
+    )
+    allPhotos = cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
+    
+    
+    return render_template("photos.html", photos=allPhotos)
 
 # default page
 @app.route("/", methods=["GET"])
