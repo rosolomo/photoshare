@@ -370,10 +370,18 @@ def getAllPhotos():
     )
     allPhotos = cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
 
-    if len(allPhotos)>0:
-        return render_template("photos.html",name="CHUNCKYMONKEY", photos=allPhotos)
+    if (not flask_login.AnonymousUserMixin.is_anonymous):
+        userPhotos = ""
+        name = ""
     else:
-        return render_template("photos.html",photos = "")
+        uid = flask_login.current_user.id
+        uname = getName(uid)
+        userPhotos = getUsersPhotos(uid)
+
+        if len(allPhotos)>0:
+          return render_template("photos.html",name=uname, photos=allPhotos, myPhotos= userPhotos)
+
+    return render_template("photos.html",name=name, photos = "")
 
 
         
