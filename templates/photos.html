@@ -4,7 +4,7 @@
 
 {% if name %}
 <h1>Hello {{ name }}!</h1>
-<h2><a href='/myPhotos'></a>View My Photos</h2>
+<h2><a href='/myPhotos'>View My Photos</a></h2>
 {% endif %}
 
 {% if photos %}
@@ -12,11 +12,11 @@
 <ul>
     {% for photo in photos %}
     <li>{{photo[2]}}<br>
-        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' />
+        <img src='data:image/jpg;base64, {{ photo[0] }}' />
     </li>
     {% endfor %}
 </ul>
-{%else%}
+{% else %}
 <h2> No photos available for display</h2>
 {% endif %}
 <ul>
