@@ -39,7 +39,6 @@ users = cursor.fetchall()
 
 
 def getUserList():
-    cursor = conn.cursor()
     cursor.execute("SELECT email from Users")
     return cursor.fetchall()
 
@@ -54,7 +53,12 @@ def user_loader(email):
     if not (email) or email not in str(users):
         return
     user = User()
-    user.id = email
+    cursor = mysql.connect().cursor()
+    cursor.execute("SELECT user_id FROM Users WHERE email = '{0}'".format(email))
+    data = cursor.fetchall()
+    user.id = str(data[0][0])
+    print("in user_loader user id", user.id)
+    # user.id = getUserIdFromEmail(email)
     return user
 
 
@@ -65,11 +69,15 @@ def request_loader(request):
     if not (email) or email not in str(users):
         return
     user = User()
-    user.id = email
+    # user.id = getUserIdFromEmail(email)
     cursor = mysql.connect().cursor()
     cursor.execute("SELECT password FROM Users WHERE email = '{0}'".format(email))
     data = cursor.fetchall()
     pwd = str(data[0][0])
+    cursor.execute("SELECT user_id FROM Users WHERE email = '{0}'".format(email))
+    data = cursor.fetchall()
+    user.id = str(data[0][0])
+    # print("in user_loader user id", user.id)
     user.is_authenticated = request.form["password"] == pwd
     return user
 
@@ -136,10 +144,15 @@ def register_user():
     # tests to see if all required fields (first,last names, password, email, dob) were filled
     try:
         email = request.form.get("email")
+        # print("email = ", email)
         password = request.form.get("password")
+        # print("password = ", password)
         first_name = request.form.get("first-name")
+        # print("first-name = ", first_name)
         last_name = request.form.get("last-name")
+        # print("last-name = ", last_name)
         dob = request.form.get("birthday")
+        # print("dob = ", dob)
     except:
         print(
             "couldn't find all tokens"
@@ -149,24 +162,27 @@ def register_user():
     test = isEmailUnique(email)
     # if email is unique
     if test:
+        # create a new user id, 1 greater than previous max
+        cursor.execute("SELECT MAX(user_id) FROM Users")
+        user_id = cursor.fetchone()[0] + 1
+        print(user_id)
         print(
-            # cursor.execute(
-            #     "INSERT INTO Users (user_id, first_name, last_name, email, password) VALUES ('{0}', '{1}','{2}','{3}')".format(
-            #         first_name, last_name, email, password
-            #     )
-            # )
             cursor.execute(
-                "INSERT INTO Users (email, password) VALUES ('{0}', '{1}')".format(
-                    email, password
+                "INSERT INTO Users (user_id, first_name, last_name, email, password) VALUES ('{0}', '{1}','{2}','{3}','{4}')".format(
+                    user_id, first_name, last_name, email, password
                 )
             )
         )
         conn.commit()
         # log user in
         user = User()
-        user.id = email
+        user.id = user_id
         flask_login.login_user(user)
-        return render_template("hello.html", name=email, message="Account Created!")
+        cursor.execute(
+            "SELECT first_name FROM Users WHERE user_id = '{0}'".format(user_id)
+        )
+        first = cursor.fetchone()[0]
+        return render_template("hello.html", name=first, message="Account Created!")
     else:
         print("couldn't find all tokens")
         return flask.redirect(flask.url_for("register"))
@@ -175,9 +191,7 @@ def register_user():
 def getUsersPhotos(uid):
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT imgdata, picture_id, caption FROM Pictures WHERE user_id = '{0}'".format(
-            uid
-        )
+        "SELECT data, picture_id, caption FROM Photo WHERE user_id = '{0}'".format(uid)
     )
     return cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
 
@@ -204,9 +218,15 @@ def isEmailUnique(email):
 @app.route("/profile")
 @flask_login.login_required
 def protected():
-    return render_template(
-        "hello.html", name=flask_login.current_user.id, message="Here's your profile"
+    print("in protected user id = ", flask_login.current_user.id)
+    cursor.execute(
+        "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
+            flask_login.current_user.id
+        )
     )
+    first = cursor.fetchone()[0]
+    print("first name = ", first)
+    return render_template("hello.html", name=first, message="Here's your profile")
 
 
 # begin photo uploading code
@@ -222,14 +242,28 @@ def allowed_file(filename):
 @flask_login.login_required
 def upload_file():
     if request.method == "POST":
-        uid = getUserIdFromEmail(flask_login.current_user.id)
+        # uid = getUserIdFromEmail(flask_login.current_user.id)
+        uid = flask_login.current_user.id
+        cursor = conn.cursor()
+        imgfile = request.files["photo"]
         imgfile = request.files["photo"]
         caption = request.form.get("caption")
+        albums_name = request.form.get("album")
         photo_data = imgfile.read()
-        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(photo_id) FROM Photos")
+        photo_id = cursor.fetchone()[0] + 1
+        # if the user doesn't own an album of that name
+        if not cursor.execute(
+            "SELECT albums_id FROM albums WHERE albums_id = '{0}' and user_id = '{1}'".format(
+                albums_name, uid
+            )
+        ):
+            return render_template("createalbum.html")
+        albums_id = cursor.fetchone()[0]
+        photo_id = cursor.fetchone()[0] + 1
         cursor.execute(
-            """INSERT INTO Pictures (imgdata, user_id, caption) VALUES (%s, %s, %s )""",
-            (photo_data, uid, caption),
+            """INSERT INTO Photos (data, user_id, caption, photo_id, albums_id) VALUES (%s, %s, %s, %s, %s )""",
+            (photo_data, uid, caption, photo_id, albums_id),
         )
         conn.commit()
         return render_template(
@@ -245,6 +279,25 @@ def upload_file():
 
 
 # end photo uploading code
+
+# user's friends page
+@app.route("/friends", methods=["GET", "POST"])
+@flask_login.login_required
+def find_friends():
+    cursor.execute(
+        "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
+            flask_login.current_user.id
+        )
+    )
+    first = cursor.fetchone()[0]
+    cursor.execute(
+        "SELECT user_id2  FROM Friends WHERE user_id1 = '{0}'".format(
+            flask_login.current_user.id
+        )
+    )
+    friends = cursor.fetchall()
+
+    return render_template("friends.html", name=first, friends=friends)
 
 
 # default page
