@@ -57,8 +57,7 @@ def user_loader(email):
     cursor.execute("SELECT user_id FROM Users WHERE email = '{0}'".format(email))
     data = cursor.fetchall()
     user.id = str(data[0][0])
-    print("in user_loader user id", user.id)
-    # user.id = getUserIdFromEmail(email)
+    # print("in user_loader user id", user.id)
     return user
 
 
@@ -142,17 +141,15 @@ def register():
 @app.route("/register", methods=["POST"])
 def register_user():
     # tests to see if all required fields (first,last names, password, email, dob) were filled
+    # for optional field, only bday gives problems if empty
     try:
         email = request.form.get("email")
-        # print("email = ", email)
         password = request.form.get("password")
-        # print("password = ", password)
         first_name = request.form.get("first-name")
-        # print("first-name = ", first_name)
         last_name = request.form.get("last-name")
-        # print("last-name = ", last_name)
         dob = request.form.get("birthday")
-        # print("dob = ", dob)
+        home = request.form.get("hometown")
+        gender = request.form.get("gender")
     except:
         print(
             "couldn't find all tokens"
@@ -165,14 +162,26 @@ def register_user():
         # create a new user id, 1 greater than previous max
         cursor.execute("SELECT MAX(user_id) FROM Users")
         user_id = cursor.fetchone()[0] + 1
-        print(user_id)
         print(
             cursor.execute(
-                "INSERT INTO Users (user_id, first_name, last_name, email, password) VALUES ('{0}', '{1}','{2}','{3}','{4}')".format(
-                    user_id, first_name, last_name, email, password
+                "INSERT INTO Users (user_id, first_name, last_name, email, password, hometown, gender) VALUES ('{0}', '{1}','{2}','{3}','{4}','{5}','{6}'a)".format(
+                    user_id,
+                    first_name,
+                    last_name,
+                    email,
+                    password,
+                    home,
+                    gender,
                 )
             )
         )
+        conn.commit()
+        if dob != "":
+            cursor.execute(
+                "UPDATE Users SET birth_date = '{0}' WHERE user_id = '{1}'".format(
+                    dob, user_id
+                )
+            )
         conn.commit()
         # log user in
         user = User()
@@ -191,15 +200,30 @@ def register_user():
 def getUsersPhotos(uid):
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT data, picture_id, caption FROM Photo WHERE user_id = '{0}'".format(uid)
+        "SELECT data, photo_id, caption FROM Photos WHERE user_id = '{0}'".format(uid)
     )
     return cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
+
+
+def getUsersAlbums(uid):
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT name, albums_id FROM Albums WHERE user_id = '{0}'".format(uid)
+    )
+    return cursor.fetchall()
 
 
 def getUserIdFromEmail(email):
     cursor = conn.cursor()
     cursor.execute("SELECT user_id  FROM Users WHERE email = '{0}'".format(email))
     return cursor.fetchone()[0]
+
+
+# def getTopUsers():
+#     cursor = conn.cursor()
+#     cursor.execute(
+#         "SELECT first_name, last_name FROM Users WHERE SUM(SELECT( COUNT(comment_id) FROM Comments WHERE Comments.user_id = User.user_id)  ) "
+#     )
 
 
 def isEmailUnique(email):
@@ -219,14 +243,18 @@ def isEmailUnique(email):
 @flask_login.login_required
 def protected():
     print("in protected user id = ", flask_login.current_user.id)
-    cursor.execute(
-        "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
-            flask_login.current_user.id
-        )
-    )
+    uid = flask_login.current_user.id
+    cursor.execute("SELECT first_name  FROM Users WHERE user_id = '{0}'".format(uid))
     first = cursor.fetchone()[0]
     print("first name = ", first)
-    return render_template("hello.html", name=first, message="Here's your profile")
+    return render_template(
+        "hello.html",
+        name=first,
+        message="Here's your profile",
+        photos=getUsersPhotos(uid),
+        albums=getUsersAlbums(uid)
+        # topUsers=getTopUsers(),
+    )
 
 
 # begin photo uploading code
@@ -252,15 +280,25 @@ def upload_file():
         photo_data = imgfile.read()
         cursor.execute("SELECT MAX(photo_id) FROM Photos")
         photo_id = cursor.fetchone()[0] + 1
-        # if the user doesn't own an album of that name
+        # if the user doesn't own an album of that name, create a new one
         if not cursor.execute(
-            "SELECT albums_id FROM albums WHERE albums_id = '{0}' and user_id = '{1}'".format(
+            "SELECT albums_id FROM albums WHERE albums_name = '{0}' and user_id = '{1}'".format(
                 albums_name, uid
             )
         ):
-            return render_template("createalbum.html")
+            cursor.execute("SELECT MAX(albums_id) FROM Albums")
+            albums_id = cursor.fetchone()[0] + 1
+            cursor.execute(
+                "INSERT INTO Albums (albums_id, user_id, name) VALUES (%s, %s, %s)",
+                (albums_id, uid, albums_name),
+            )
+            cursor.commit()
+        cursor.execute(
+            "SELECT albums_id FROM albums WHERE albums_name = '{0}' and user_id = '{1}'".format(
+                albums_name, uid
+            )
+        )
         albums_id = cursor.fetchone()[0]
-        photo_id = cursor.fetchone()[0] + 1
         cursor.execute(
             """INSERT INTO Photos (data, user_id, caption, photo_id, albums_id) VALUES (%s, %s, %s, %s, %s )""",
             (photo_data, uid, caption, photo_id, albums_id),
@@ -271,6 +309,7 @@ def upload_file():
             name=flask_login.current_user.id,
             message="Photo uploaded!",
             photos=getUsersPhotos(uid),
+            albums=getUsersAlbum(uid),
             base64=base64,
         )
     # The method is GET so we return a  HTML form to upload the a photo.
@@ -296,7 +335,6 @@ def find_friends():
         )
     )
     friends = cursor.fetchall()
-
     return render_template("friends.html", name=first, friends=friends)
 
 def getName(uid):

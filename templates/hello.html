@@ -8,13 +8,11 @@
 <h1>Hello {{ name }}!</h1>
 {% endif %}
 
-{% if photos %}
-<h2>Here are your photos</h2>
+{% if albums %}
+<h2>Here are your albums</h2>
 <ul>
-  {% for photo in photos %}
-
-  <li>{{photo[2]}}<br>
-    <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' /></li>
+  {% for album in albums %}
+  <li>{{album[0]}}<br></li>
   {% endfor %}
 </ul>
 {% endif %}
