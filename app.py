@@ -23,7 +23,7 @@ app.secret_key = "super secret string"  # Change this!
 
 # These will need to be changed according to your creditionals
 app.config["MYSQL_DATABASE_USER"] = "root"
-app.config["MYSQL_DATABASE_PASSWORD"] = "#PASSWORD"
+app.config["MYSQL_DATABASE_PASSWORD"] = "trees"
 app.config["MYSQL_DATABASE_DB"] = "photoshare"
 app.config["MYSQL_DATABASE_HOST"] = "localhost"
 mysql.init_app(app)
@@ -161,10 +161,14 @@ def register_user():
     if test:
         # create a new user id, 1 greater than previous max
         cursor.execute("SELECT MAX(user_id) FROM Users")
-        user_id = cursor.fetchone()[0] + 1
+        id_value = cursor.fetchone()[0]
+        if id_value is not None:
+            user_id = id_value + 1
+        else:
+            user_id = 0
         print(
             cursor.execute(
-                "INSERT INTO Users (user_id, first_name, last_name, email, password, hometown, gender) VALUES ('{0}', '{1}','{2}','{3}','{4}','{5}','{6}'a)".format(
+                "INSERT INTO Users (user_id, first_name, last_name, email, password, hometown, gender) VALUES ('{0}', '{1}','{2}','{3}','{4}','{5}','{6}')".format(
                     user_id,
                     first_name,
                     last_name,
@@ -277,24 +281,35 @@ def upload_file():
         imgfile = request.files["photo"]
         caption = request.form.get("caption")
         albums_name = request.form.get("album")
-        photo_data = imgfile.read()
+        photo_data = base64.b64encode(imgfile.read())
         cursor.execute("SELECT MAX(photo_id) FROM Photos")
-        photo_id = cursor.fetchone()[0] + 1
+        
+        id_value = cursor.fetchone()[0]
+        if id_value is not None:
+            photo_id = id_value + 1
+        else:
+            photo_id = 0
+
         # if the user doesn't own an album of that name, create a new one
         if not cursor.execute(
-            "SELECT albums_id FROM albums WHERE albums_name = '{0}' and user_id = '{1}'".format(
+            "SELECT albums_id FROM albums WHERE name = '{0}' and user_id = '{1}'".format(
                 albums_name, uid
             )
         ):
             cursor.execute("SELECT MAX(albums_id) FROM Albums")
-            albums_id = cursor.fetchone()[0] + 1
+            id_value = cursor.fetchone()[0]
+            if id_value is not None:
+                albums_id = id_value + 1
+            else:
+                albums_id = 0
             cursor.execute(
                 "INSERT INTO Albums (albums_id, user_id, name) VALUES (%s, %s, %s)",
                 (albums_id, uid, albums_name),
             )
             conn.commit()
+            
         cursor.execute(
-            "SELECT albums_id FROM albums WHERE albums_name = '{0}' and user_id = '{1}'".format(
+            "SELECT albums_id FROM albums WHERE name = '{0}' and user_id = '{1}'".format(
                 albums_name, uid
             )
         )
@@ -309,7 +324,7 @@ def upload_file():
             name=flask_login.current_user.id,
             message="Photo uploaded!",
             photos=getUsersPhotos(uid),
-            albums=getUsersAlbum(uid),
+            albums=getUsersAlbums(uid),
             base64=base64,
         )
     # The method is GET so we return a  HTML form to upload the a photo.
@@ -373,6 +388,39 @@ def add_friend():
     friends = cursor.fetchall()
     return render_template("friends.html", name=first, friends=friends)
 
+def getName(uid):
+    cursor.execute(
+        "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
+            flask_login.current_user.id
+        )
+    )
+    return cursor.fetchone()[0]
+
+# All photos
+@app.route("/photos", methods=["GET", "POST"])
+# @flask_login.login_required
+def getAllPhotos():
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT data, photo_id, caption FROM Photos".format()
+    )
+    allPhotos = cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
+
+    if (not flask_login.AnonymousUserMixin.is_anonymous):
+        userPhotos = ""
+        name = ""
+    else:
+        uid = flask_login.current_user.id
+        uname = getName(uid)
+        userPhotos = getUsersPhotos(uid)
+
+        if len(allPhotos)>0:
+          return render_template("photos.html",name=uname, photos=allPhotos, myPhotos= userPhotos)
+
+    return render_template("photos.html",name=name, photos = "")
+
+
+        
 
 # default page
 @app.route("/", methods=["GET"])
