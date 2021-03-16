@@ -12,6 +12,7 @@
 import flask
 from flask import Flask, Response, request, render_template, redirect, url_for
 from flaskext.mysql import MySQL
+from config import password
 import flask_login
 
 # for image uploading
@@ -23,7 +24,7 @@ app.secret_key = "super secret string"  # Change this!
 
 # These will need to be changed according to your creditionals
 app.config["MYSQL_DATABASE_USER"] = "root"
-app.config["MYSQL_DATABASE_PASSWORD"] = "trees"
+app.config["MYSQL_DATABASE_PASSWORD"] = password()
 app.config["MYSQL_DATABASE_DB"] = "photoshare"
 app.config["MYSQL_DATABASE_HOST"] = "localhost"
 mysql.init_app(app)
@@ -352,10 +353,10 @@ def find_friends():
     friends = cursor.fetchall()
     return render_template("friends.html", name=first, friends=friends)
 
-def getName(uid):
+def getName(uid,key="user_id",value="first_name",table="Users"):
     cursor.execute(
-        "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
-            flask_login.current_user.id
+        "SELECT {2} FROM {3} WHERE {1} = '{0}'".format(
+            flask_login.current_user.id, key,value, table
         )
     )
     return cursor.fetchone()[0]
@@ -370,26 +371,54 @@ def getAllPhotos():
     )
     allPhotos = cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
 
-    if (not flask_login.AnonymousUserMixin.is_anonymous):
-        userPhotos = ""
-        name = ""
-    else:
+    userPhotos = ""
+    uname = ""
+    
+    if (flask_login.current_user.is_authenticated):
         uid = flask_login.current_user.id
         uname = getName(uid)
         userPhotos = getUsersPhotos(uid)
 
-        if len(allPhotos)>0:
-          return render_template("photos.html",name=uname, photos=allPhotos, myPhotos= userPhotos)
+    if len(allPhotos)>0:
+        return render_template("photos.html",name=uname, photos=allPhotos, myPhotos= userPhotos)
 
-    return render_template("photos.html",name=name, photos = "")
+    return render_template("photos.html",name=uname, photos = "")
 
 
-        
+#Albums
+def getPhotosInAlbums(aid):
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT data, photo_id, caption FROM Photos WHERE albums_id = '{0}'".format(aid)
+    )
+    return cursor.fetchall()
 
+@app.route("/albums", methods=["GET", "POST"])
+# @flask_login.login_required
+def getAllAblums():
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT name, albums_id, user_id FROM Albums".format()
+    )
+    allAblums = cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
+    allAlbumPhotos = [(x[0],getPhotosInAlbums(x[1])) for x in allAblums]
+    userAlbums = ""
+    uname = "" 
+    
+    if (flask_login.current_user.is_authenticated):
+        uid = flask_login.current_user.id
+        uname = getName(uid)
+        userAlbums = getUsersAlbums(uid)
+        userAlbumsPhotos = [(x[0], getPhotosInAlbums(x[1])) for x in userAlbums]
+
+    if len(allAblums) > 0:
+        return render_template("albums.html", name=uname, albums=allAlbumPhotos, myAlbums=userAlbumsPhotos)
+
+    return render_template("albums.html", name=uname, albums="")
 # default page
 @app.route("/", methods=["GET"])
 def hello():
-    return render_template("hello.html", message="Welecome to Photoshare")
+    return render_template("hello.html", message=None)
 
 
 if __name__ == "__main__":

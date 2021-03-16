@@ -1,6 +1,6 @@
 <!doctype html>
 
-<title>photos!</title>
+<title>Albums!</title>
 
 <ul>
     <li><a href='/profile'>Profile</a></li>
@@ -14,44 +14,45 @@
 <h2 id = "mpb"><button onclick="togglePhotos()">View My Photos</button></h2>
 <h2 id="apb"><button onclick="togglePhotos()">View All Photos</button></h2>
 <div id="myP">
-    {% if myPhotos %}
-    <h2>Here are your photos</h2>
+    {% if myAlbums %}
+    <h2>Here are your Albums</h2>
     <ul>
         <table>
-            {% for photo in myPhotos %}
+            {% for album in myAlbums %}
             <tr>
-                <td>{{photo[2]}}</td>
-            </tr>
-            <tr>
-                <td><img src='data:image/jpg;base64, {{ photo[0] }}' /></td>
+                <td>{{album[0]}}: </td>
+                {% for photo in album[1] %}
+                <td><img style = 'max-height: 300px;' src='data:image/jpg;base64, {{ photo[0] }}' /></td>
+                {% endfor %}
             </tr>
             {% endfor %}
         </table>
     </ul>
     {% else %}
-    <h2> You don't have any photos available</h2>
+    <h2> You don't have any albums to view</h2>
     {% endif %}
 </div>
 {% endif %}
 
 
 
-{% if photos %}
+{% if albums %}
 <div id="allP">
-<h2>Here are all photos</h2>
+<h2>Here are all Albums</h2>
 <ul>
     <table>
-    {% for photo in photos %}
-    <tr><td>{{photo[2]}}</td></tr>
-    <tr>
-        <td><img src='data:image/jpg;base64, {{ photo[0] }}' /></td>
-    </tr>
-    {% endfor %}
+        {% for album in albums %}
+        <tr>
+            <td>{{album[0]}}: </td>
+            {% for photo in album[1] %}
+            <td><img style='max-height: 300px;' src='data:image/jpg;base64, {{ photo[0] }}' /></td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
     </table>
 </ul>
-
 {% else %}
-<h2> No photos available for display</h2>
+<h2> There are no albums to view</h2>
 </div>
 {% endif %}
 
