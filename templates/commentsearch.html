@@ -1,0 +1,23 @@
+<!doctype html>
+
+<title>Comment Search Results!</title>
+{% if searched %}
+<h2>Results:</h2>
+<ol>
+    {% if results == 0 %}
+    <h3>No Comments found </h3>
+    {% else %}
+    {% for result in results %}
+    <li>{{result[0]}} mentions '{{searched}}' {{result[1]}} times</li>
+    {% endfor %}
+    {% endif %}
+</ol>
+{% else %}
+<h2>Nothing searched</h2>
+{% endif %}
+<ul>
+    <li><a href='/profile'>Profile</a></li>
+    <li><a href='/upload'>Upload a photo</a> </li>
+    <li><a href='/logout'>Logout</a></li>
+    <li><a href='/'>Home</a></li>
+</ul>

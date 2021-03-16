@@ -124,7 +124,7 @@ def login():
 @app.route("/logout")
 def logout():
     flask_login.logout_user()
-    return render_template("hello.html", message="Logged out")
+    return render_template("hello.html", message="Logged out", topUsers=getTopUsers())
 
 
 @login_manager.unauthorized_handler
@@ -195,7 +195,9 @@ def register_user():
             "SELECT first_name FROM Users WHERE user_id = '{0}'".format(user_id)
         )
         first = cursor.fetchone()[0]
-        return render_template("hello.html", name=first, message="Account Created!")
+        return render_template(
+            "hello.html", name=first, message="Account Created!", topUsers=getTopUsers()
+        )
     else:
         print("couldn't find all tokens")
         return flask.redirect(flask.url_for("register"))
@@ -223,11 +225,12 @@ def getUserIdFromEmail(email):
     return cursor.fetchone()[0]
 
 
-# def getTopUsers():
-#     cursor = conn.cursor()
-#     cursor.execute(
-#         "SELECT first_name, last_name FROM Users WHERE SUM(SELECT( COUNT(comment_id) FROM Comments WHERE Comments.user_id = User.user_id)  ) "
-#     )
+def getTopUsers():
+    cursor = conn.cursor()
+    cursor.execute(
+        "Select u.email, (Select count(*) From Comments c Where c.user_id = u.user_id) + (Select count(*) From Photos p Where p.user_id = u.user_id) as total From Users u Order by total desc Limit 10"
+    )
+    return cursor.fetchall()
 
 
 def isEmailUnique(email):
@@ -256,8 +259,8 @@ def protected():
         name=first,
         message="Here's your profile",
         photos=getUsersPhotos(uid),
-        albums=getUsersAlbums(uid)
-        # topUsers=getTopUsers(),
+        albums=getUsersAlbums(uid),
+        topUsers=getTopUsers(),
     )
 
 
@@ -283,7 +286,7 @@ def upload_file():
         albums_name = request.form.get("album")
         photo_data = base64.b64encode(imgfile.read())
         cursor.execute("SELECT MAX(photo_id) FROM Photos")
-        
+
         id_value = cursor.fetchone()[0]
         if id_value is not None:
             photo_id = id_value + 1
@@ -307,7 +310,7 @@ def upload_file():
                 (albums_id, uid, albums_name),
             )
             conn.commit()
-            
+
         cursor.execute(
             "SELECT albums_id FROM albums WHERE name = '{0}' and user_id = '{1}'".format(
                 albums_name, uid
@@ -326,6 +329,7 @@ def upload_file():
             photos=getUsersPhotos(uid),
             albums=getUsersAlbums(uid),
             base64=base64,
+            topUsers=getTopUsers(),
         )
     # The method is GET so we return a  HTML form to upload the a photo.
     else:
@@ -352,8 +356,8 @@ def find_friends():
     friends = cursor.fetchall()
     # friend reccomendations
     cursor.execute(
-        "Select email from Users Where user_id <> '{0}' and user_id IN (Select f2.user_id2 from  Friends f1 INNER JOIN Friends f2 ON f1.user_id2 = f2.user_id1 WHERE f1.user_id1 = '{1}')".format(
-            flask_login.current_user.id, flask_login.current_user.id
+        "Select email from Users Where user_id <> '{0}' and user_id IN (Select f2.user_id2 from  Friends f1 INNER JOIN Friends f2 ON f1.user_id2 = f2.user_id1 WHERE f1.user_id1 = '{0}')".format(
+            flask_login.current_user.id
         )
     )
     suggestions = cursor.fetchall()
@@ -388,6 +392,7 @@ def add_friend():
     friends = cursor.fetchall()
     return render_template("friends.html", name=first, friends=friends)
 
+
 def getName(uid):
     cursor.execute(
         "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
@@ -396,17 +401,16 @@ def getName(uid):
     )
     return cursor.fetchone()[0]
 
+
 # All photos
 @app.route("/photos", methods=["GET", "POST"])
 # @flask_login.login_required
 def getAllPhotos():
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT data, photo_id, caption FROM Photos".format()
-    )
+    cursor.execute("SELECT data, photo_id, caption FROM Photos".format())
     allPhotos = cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
 
-    if (not flask_login.AnonymousUserMixin.is_anonymous):
+    if not flask_login.AnonymousUserMixin.is_anonymous:
         userPhotos = ""
         name = ""
     else:
@@ -414,18 +418,41 @@ def getAllPhotos():
         uname = getName(uid)
         userPhotos = getUsersPhotos(uid)
 
-        if len(allPhotos)>0:
-          return render_template("photos.html",name=uname, photos=allPhotos, myPhotos= userPhotos)
+        if len(allPhotos) > 0:
+            return render_template(
+                "photos.html", name=uname, photos=allPhotos, myPhotos=userPhotos
+            )
 
-    return render_template("photos.html",name=name, photos = "")
+    return render_template("photos.html", name=name, photos="")
 
 
-        
+@app.route("/commentsearch", methods=["GET", "POST"])
+@flask_login.login_required
+def search():
+    searched = str(request.form.get("commentsearch"))
+    search_text = "%" + searched + "%"
+    print("search text = ", search_text)
+    cursor = conn.cursor()
+    # cursor.execute("SELECT user_id FROM Users WHERE user_id IN (SELECT user_id FROM Comments WHERE text Like "%'{0}'%")".format(search_text))
+    cursor.execute(
+        "Select u.email, (SELECT COUNT(c.user_id) FROM Comments c WHERE c.user_id= u.user_id and c.text like '{0}') as results From Users U WHERE (SELECT COUNT(c.user_id) FROM Comments c WHERE c.user_id= u.user_id and c.text like '{0}') > 0 Order By results desc".format(
+            search_text
+        )
+    )
+    results = cursor.fetchall()
+    print("results = ", results)
+    print("lenresults = ", len(results))
+    if len(results) == 0:
+        return render_template("commentsearch.html", searched=searched, results=0)
+    return render_template("commentsearch.html", searched=searched, results=results)
+
 
 # default page
 @app.route("/", methods=["GET"])
 def hello():
-    return render_template("hello.html", message="Welecome to Photoshare")
+    return render_template(
+        "hello.html", message="Welecome to Photoshare", topUsers=getTopUsers()
+    )
 
 
 if __name__ == "__main__":
