@@ -4,26 +4,17 @@
 
 {% if name %}
 <h1>Hello {{ name }}!</h1>
-<h2>Here are your friends</h2>
 {% endif %}
 
 {% if friends %}
 <h2>Here are your friends</h2>
 <ul>
     {% for friend in friends %}
-    <li>{{friend[0]}}</li>
+    <li>{{friends[1]}}</li>
     {% endfor %}
 </ul>
 {% endif %}
-{% if suggestions %}
-<h2>Some friend suggestions</h2>
-<ul>
-    {% for suggestion in suggestions %}
-    <li>{{suggestion[0]}}</li>
-    {% endfor %}
-</ul>
-{% endif %}
-<form method='post' action="{{ url_for('add_friend') }}">
+<form method='post' action="/addfriends">
     <input type="text" placeholder="enter an email to search" name="search">
     <button type="submit">Submit</button>
 </form>
