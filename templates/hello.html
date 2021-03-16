@@ -2,6 +2,8 @@
 <!doctype html>
 {% if message %}
 <h4>{{message}}!</h4>
+{% else %}
+<h3>Welcome to PhotoShare</h3>
 {% endif %}
 <title>Photoshare</title>
 {% if name %}
@@ -9,10 +11,11 @@
 {% endif %}
 
 {% if albums %}
-<h2>Here are your albums</h2>
+<h4><a href='/albums'>View Albums</a></42>
 <ul>
   {% for album in albums %}
-  <li>{{album[0]}}<br></li>
+  <li>
+    {{album[0]}}<br></li>
   {% endfor %}
 </ul>
 {% endif %}
@@ -36,5 +39,8 @@
   <li><a href='/friends'>See your friend list or find a new one</a> </li>
   <li><a href='/photos'>See photos</a> </li>
   <li><a href='/logout'>Logout</a></li>
+  <li><a href='/'>Tags</a></li>
+  <li><a href='/'>comments</a></li>
+  <li><a href='/'>photos</a></li>
   <li><a href='/'>Home</a></li>
 </ul>
