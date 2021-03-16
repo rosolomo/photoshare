@@ -308,7 +308,7 @@ def upload_file():
                 (albums_id, uid, albums_name),
             )
             conn.commit()
-
+            
         cursor.execute(
             "SELECT albums_id FROM albums WHERE name = '{0}' and user_id = '{1}'".format(
                 albums_name, uid
@@ -336,9 +336,45 @@ def upload_file():
 # end photo uploading code
 
 # user's friends page
-@app.route("/friends", methods=["GET", "POST"])
+@app.route("/friends", methods=["GET"])
 @flask_login.login_required
 def find_friends():
+    cursor.execute(
+        "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
+            flask_login.current_user.id
+        )
+    )
+    first = cursor.fetchone()[0]
+    cursor.execute(
+        "SELECT email from Users WHERE user_id IN (SELECT user_id2  FROM Friends WHERE user_id1 = '{0}')".format(
+            flask_login.current_user.id
+        )
+    )
+    friends = cursor.fetchall()
+    # friend reccomendations
+    cursor.execute(
+        "Select email from Users Where user_id <> '{0}' and user_id IN (Select f2.user_id2 from  Friends f1 INNER JOIN Friends f2 ON f1.user_id2 = f2.user_id1 WHERE f1.user_id1 = '{1}')".format(
+            flask_login.current_user.id, flask_login.current_user.id
+        )
+    )
+    suggestions = cursor.fetchall()
+    print("suggetions = ", suggestions)
+    return render_template(
+        "friends.html", name=first, friends=friends, suggestions=suggestions
+    )
+
+
+@app.route("/addfriends", methods=["GET", "POST"])
+@flask_login.login_required
+def add_friend():
+    email = request.form.get("search")
+    cursor.execute("SELECT user_id  FROM Users WHERE email = '{0}'".format(email))
+    friend_uid = cursor.fetchone()[0]
+    cursor.execute(
+        "INSERT INTO Friends (user_id1, user_id2) VALUES (%s,%s)",
+        (flask_login.current_user.id, friend_uid),
+    )
+    conn.commit()
     cursor.execute(
         "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
             flask_login.current_user.id
