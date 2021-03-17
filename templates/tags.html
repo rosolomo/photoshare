@@ -12,7 +12,6 @@
 {% if tags %}
 <ul>
 {% for tag in tags %}
-{{tag[0]}}
 <li>
     <form method='post' action="/tag">
     <button type="submit" name="tag_name" value={{tag[0]}}>{{tag[0]}}</button>

@@ -23,7 +23,7 @@
     {% if myPhotos %}
     <h2>Here are your photos with tag {{searched}}</h2>
     <ul>
-        {% for photo in myPhotos with the tag {{searched}}%}
+        {% for photo in myPhotos%}
         <table>
             <tr>
                 <td>{{photo[2]}}

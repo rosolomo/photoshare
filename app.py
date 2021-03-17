@@ -264,7 +264,6 @@ def howmanytags(photo,uid):
                 total_tags += 1
     return total_tags
 
-def getphotoarray():
 
 
 @app.route("/profile")
@@ -482,7 +481,7 @@ def tag_results(text):
 @app.route("/tag", methods=["GET","POST"])
 def taggedPhotos():
     name = str(request.form.get("tag_name"))
-    print(name)
+    # print(name)
     results = tag_results(name)
     return render_template("photoSearch.html", searched=name,  photos=results)
 
