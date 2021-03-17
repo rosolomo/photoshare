@@ -355,9 +355,10 @@ def find_friends():
         )
     )
     friends = cursor.fetchall()
+
     # friend reccomendations
     cursor.execute(
-        "Select email from Users Where user_id <> '{0}' and user_id IN (Select f2.user_id2 from  Friends f1 INNER JOIN Friends f2 ON f1.user_id2 = f2.user_id1 WHERE f1.user_id1 = '{0}')".format(
+        "Select email from Users Where user_id <> '{0}' and user_id IN (Select f2.user_id2 from Friends f1 INNER JOIN Friends f2 ON f1.user_id2 = f2.user_id1 WHERE f1.user_id1 = '{0}' and f2.user_id2 NOT IN (SELECT f3.user_id2 FROM Friends f3 WHERE f3.user_id1 = '{0}'))".format(
             flask_login.current_user.id
         )
     )
@@ -374,11 +375,18 @@ def add_friend():
     email = request.form.get("search")
     cursor.execute("SELECT user_id  FROM Users WHERE email = '{0}'".format(email))
     friend_uid = cursor.fetchone()[0]
-    cursor.execute(
-        "INSERT INTO Friends (user_id1, user_id2) VALUES (%s,%s)",
-        (flask_login.current_user.id, friend_uid),
-    )
-    conn.commit()
+    message = "You are already friends"
+    if not cursor.execute(
+        "SELECT user_id2  FROM Friends WHERE user_id1 = '{0}' and user_id2 = '{1}'".format(
+            flask_login.current_user.id, friend_uid
+        )
+    ):
+        cursor.execute(
+            "INSERT INTO Friends (user_id1, user_id2) VALUES (%s,%s)",
+            (flask_login.current_user.id, friend_uid),
+        )
+        conn.commit()
+        message = ""
     cursor.execute(
         "SELECT first_name  FROM Users WHERE user_id = '{0}'".format(
             flask_login.current_user.id
@@ -386,12 +394,12 @@ def add_friend():
     )
     first = cursor.fetchone()[0]
     cursor.execute(
-        "SELECT user_id2  FROM Friends WHERE user_id1 = '{0}'".format(
+        "SELECT email from Users WHERE user_id IN (SELECT user_id2  FROM Friends WHERE user_id1 = '{0}')".format(
             flask_login.current_user.id
         )
     )
     friends = cursor.fetchall()
-    return render_template("friends.html", name=first, friends=friends)
+    return render_template("friends.html", name=first, friends=friends, message=message)
 
 
 def getName(uid, key="user_id", value="first_name", table="Users"):
@@ -492,15 +500,26 @@ def see_likes():
     likers = cursor.fetchall()
     message = "You have already liked this picture"
     print("liker = ", likers)
-    if cursor.execute("Select user_id FROM Likes where photo_id = '{0}' and user_id = '{1}' ".format(photoid, flask_login.current_user.id)):
-        cursor.execute("Insert into Likes (photo_id, user_id) Values (%s,%s)",(photoid, flask_login.current_user.id) )
+    if cursor.execute(
+        "Select user_id FROM Likes where photo_id = '{0}' and user_id = '{1}' ".format(
+            photoid, flask_login.current_user.id
+        )
+    ):
+        cursor.execute(
+            "Insert into Likes (photo_id, user_id) Values (%s,%s)",
+            (photoid, flask_login.current_user.id),
+        )
         message = "Thanks for liking this picture"
     cursor.execute(
         "SELECT Count(user_id) FROM Likes Where photo_id = '{0}'".format(photoid)
     )
     num_likes = cursor.fetchone()
     return render_template(
-        "liked.html", photoid=photoid, likers=likers, num_likes=num_likes, message = message
+        "liked.html",
+        photoid=photoid,
+        likers=likers,
+        num_likes=num_likes,
+        message=message,
     )
 
 
