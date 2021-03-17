@@ -1,0 +1,26 @@
+<!doctype html>
+
+<title>Browse Tags</title>
+
+<ul>
+    <li><a href='/profile'>Profile</a></li>
+    <li><a href='/upload'>Upload a photo</a> </li>
+    <li><a href='/logout'>Logout</a></li>
+    <li><a href='/'>Home</a></li>
+</ul>
+
+{% if tags %}
+<ul>
+{% for tag in tags %}
+{{tag[0]}}
+<li>
+    <form method='post' action="/tag">
+    <button type="submit" name="tag_name" value={{tag[0]}}>{{tag[0]}}</button>
+</form>
+</li>
+
+{% endfor %}
+</ul>
+{% endif %}
+
+

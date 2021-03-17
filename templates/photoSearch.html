@@ -1,6 +1,6 @@
 <!doctype html>
 
-<title>photos!</title>
+<title>Tags!</title>
 
 <ul>
     <li><a href='/profile'>Profile</a></li>
@@ -9,25 +9,21 @@
     <li><a href='/'>Home</a></li>
 </ul>
 
-<form method='post' action="/commentsearch">
-    <input type="text" placeholder="search comments" name="commentsearch">
-    <button type="submit">Submit</button>
-</form>
 
 <form method='post' action="/photoSearch">
-    <input type="text" placeholder="Search Photos" name="photoSearch">
+    <input type="text" placeholder="Search Photos by tags" name="photoSearch">
     <button type="submit">Submit</button>
 </form>
 
 {% if name %}
 <h1>Hello {{ name }}!</h1>
 <h2 id="mpb"><button onclick="togglePhotos()">View My Photos</button></h2>
-<h2 id="apb" style="display: none;"><button onclick="togglePhotos()">View All Photos</button></h2>
-<div id="myP" style="display: none;">
+<h2 id="apb" ><button onclick="togglePhotos()">View All Photos</button></h2>
+<div id="myP" >
     {% if myPhotos %}
-    <h2>Here are your photos</h2>
+    <h2>Here are your photos with tag {{searched}}</h2>
     <ul>
-        {% for photo in myPhotos %}
+        {% for photo in myPhotos with the tag {{searched}}%}
         <table>
             <tr>
                 <td>{{photo[2]}}
@@ -42,7 +38,7 @@
         </table>
     </ul>
     {% else %}
-    <h2> You don't have any photos available</h2>
+    <h2> You don't have any photos with tag '{{searched}}' available</h2>
     {% endif %}
 </div>
 {% endif %}
@@ -51,7 +47,7 @@
 
 {% if photos %}
 <div id="allP">
-    <h2>Here are all photos</h2>
+    <h2>Here are all photos with the tag {{searched}}</h2>
     <ul>
 
     {% for photo in photos %}
@@ -74,10 +70,9 @@
     </ul>
 
     {% else %}
-    <h2> No photos available for display</h2>
+    <h2> No photos with tag '{{searched}}' available for display</h2>
 </div>
 {% endif %}
-
 
 
 

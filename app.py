@@ -419,10 +419,10 @@ def getAllPhotos():
         uname = getName(uid)
         userPhotos = getUsersPhotos(uid)
 
-        if len(allPhotos) > 0:
-            return render_template(
-                "photos.html", name=uname, photos=allPhotos, myPhotos=userPhotos
-            )
+    if len(allPhotos) > 0:
+        return render_template(
+            "photos.html", name=uname, photos=allPhotos, myPhotos=userPhotos
+        )
 
     return render_template("photos.html", name=uname, photos="")
 
@@ -446,7 +446,51 @@ def search():
         return render_template("commentsearch.html", searched=searched, results=0)
     return render_template("commentsearch.html", searched=searched, results=results)
 
+def tag_results(text):
+    cursor.execute(
+        "SELECT data, P.photo_id, caption FROM Photos P, Tags T, Tagged R WHERE T.name ='{0}' AND T.tag_id = R.tag_id AND P.photo_id=R.photo_id".format(text))
+    return cursor.fetchall()
 
+@app.route("/tag", methods=["GET","POST"])
+def taggedPhotos():
+    name = str(request.form.get("tag_name"))
+    print(name)
+    results = tag_results(name)
+    return render_template("photoSearch.html", searched=name,  photos=results)
+
+
+@app.route("/tags", methods=["GET","POST"])
+def getTags():
+    cursor.execute(
+        "SELECT name FROM Tags".format())
+    tags = cursor.fetchall()
+    return render_template("tags.html",tags=tags)
+
+@app.route("/photoSearch", methods=["GET", "POST"])
+# @flask_login.login_required
+def search1():
+    searched = str(request.form.get("photoSearch"))
+    search_text = "%" + searched + "%"
+    print("search text = ", search_text)
+    cursor = conn.cursor()
+    results=tag_results(search_text)
+
+    usersResults = ""
+    uname = ""
+
+    if flask_login.current_user.is_authenticated:
+        uid = flask_login.current_user.id
+        uname = getName(uid)
+        cursor.execute(
+            "SELECT data, P.photo_id, caption FROM Photos P, Tags T, Tagged R WHERE T.name ='{0}' AND P.user_id='{1}' AND T.tag_id = R.tag_id AND P.photo_id=R.photo_id".format(search_text, uid))
+        usersResults = cursor.fetchall()
+
+
+    print("results = ", results)
+    print("lenresults = ", len(results))
+    if len(results) == 0:
+        return render_template("photoSearch.html", searched=searched, name=uname, photos=0)
+    return render_template("photosSearch.html", searched=searched, name=uname, photos=results, myPhotos = usersResults)
 # Albums
 def getPhotosInAlbums(aid):
     cursor = conn.cursor()
@@ -463,7 +507,7 @@ def getAllAblums():
     cursor.execute("SELECT name, albums_id, user_id FROM Albums".format())
     allAblums = cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
     allAlbumPhotos = [(x[0], getPhotosInAlbums(x[1])) for x in allAblums]
-    userAlbums = ""
+    userAlbumsPhotos = ""
     uname = ""
 
     if flask_login.current_user.is_authenticated:
