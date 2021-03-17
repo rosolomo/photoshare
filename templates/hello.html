@@ -12,34 +12,34 @@
 
 {% if albums %}
 <h4><a href='/albums'>View Albums</a></42>
-<ul>
-  {% for album in albums %}
-  <li>
-    {{album[0]}}<br></li>
-  {% endfor %}
-</ul>
-{% endif %}
-{% if message is none %}
-<p>You should <a href='/login'>login!</a></p>
-{% else %}
-<p> Go to <a href='/profile'>profile?</a></p>
-{% endif %}
+  <ul>
+    {% for album in albums %}
+    <li>
+      {{album[0]}}<br></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if message is none %}
+  <p>You should <a href='/login'>login!</a></p>
+  {% else %}
+  <p> Go to <a href='/profile'>profile?</a></p>
+  {% endif %}
 
-{% if topUsers %}
-<h2>The most active users</h2>
-<ol>
-  {% for topUser in topUsers %}
-  <li>{{topUser[0]}}<br></li>
-  {% endfor %}
-</ol>
-{% endif %}
+  {% if topUsers %}
+  <h2>The most active users</h2>
+  <ol>
+    {% for topUser in topUsers %}
+    <li>{{topUser[0]}}<br></li>
+    {% endfor %}
+  </ol>
+  {% endif %}
 
-<ul>
-  <li><a href='/upload'>Upload a photo</a> </li>
-  <li><a href='/friends'>See your friend list or find a new one</a> </li>
-  <li><a href='/photos'>See photos</a> </li>
-  <li><a href='/logout'>Logout</a></li>
-  <li><a href='/tags'>Tags</a></li>
-  <li><a href='/'>comments</a></li>
-  <li><a href='/'>Home</a></li>
-</ul>
+  <ul>
+    <li><a href='/upload'>Upload a photo</a> </li>
+    <li><a href='/friends'>See your friend list or find a new one</a> </li>
+    <li><a href='/photos'>See photos</a> </li>
+    <li><a href='/logout'>Logout</a></li>
+    <li><a href='/tags'>Tags</a></li>
+    <li><a href='/'>Home</a></li>
+    <li><a href='/login'>login or change users</a></li>
+  </ul>
