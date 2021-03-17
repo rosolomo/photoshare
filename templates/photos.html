@@ -35,6 +35,10 @@
                         <input type="hidden" id="photoid" name="photoid" value={{ photo[1] }}>
                         <button type="submit">Like</button>
                     </form>
+                    <form action="/deletephotos" method="get">
+                        <input type="hidden" id="photoid" name="photoid" value={{ photo[1] }}>
+                        <button type="submit">Delete</button>
+                    </form>
                 </td>
             </tr>
             <tr>

@@ -12,7 +12,7 @@
 import flask
 from flask import Flask, Response, request, render_template, redirect, url_for
 from flaskext.mysql import MySQL
-from config import password
+# from config import password
 import flask_login
 from datetime import date
 
@@ -25,7 +25,8 @@ app.secret_key = "super secret string"  # Change this!
 
 # These will need to be changed according to your creditionals
 app.config["MYSQL_DATABASE_USER"] = "root"
-app.config["MYSQL_DATABASE_PASSWORD"] = password()
+# app.config["MYSQL_DATABASE_PASSWORD"] = password()
+app.config["MYSQL_DATABASE_PASSWORD"] = "2200!MRpip"
 app.config["MYSQL_DATABASE_DB"] = "photoshare"
 app.config["MYSQL_DATABASE_HOST"] = "localhost"
 mysql.init_app(app)
@@ -665,6 +666,27 @@ def see_likes():
         message=message,
     )
 
+
+@app.route("/deletephotos")
+@flask_login.login_required
+def delete_photos():
+    uid = flask_login.current_user.id
+    photoid = int(request.args.get("photoid"))
+    cursor = conn.cursor()
+    if not cursor.execute("SELECT user_id From Photos Where photo_id = '{0}' and user_id = '{1}'".format(photoid, uid)):
+        return render_template("deleted.html", message = "can only delete photos you own")
+    cursor.execute("DELETE FROM photos WHERE user_id ='{0}' and photo_id = {1};".format(uid,photoid))
+    return render_template("deleted.html", message = "sucessful deletion")
+@app.route("/deletephotos")
+@flask_login.login_required
+def delete_albums():
+    uid = flask_login.current_user.id
+    album_id = int(request.args.get("album_id"))
+    cursor = conn.cursor()
+    if not cursor.execute("SELECT user_id From Albums Where album_id = '{0}' and user_id = '{1}'".format(album_id, uid)):
+        return render_template("deleted.html", message = "can only delete albums you own")
+    cursor.execute("DELETE FROM Albums WHERE user_id ='{0}' and album_id = {1};".format(uid,album_id))
+    return render_template("deleted.html", message = "sucessful deletion")
 
 # default page
 @app.route("/", methods=["GET"])
