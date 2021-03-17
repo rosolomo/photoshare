@@ -9,7 +9,41 @@
     <li><a href='/'>Home</a></li>
 </ul>
 
+<h2>All Tags</h2>
+<p>Click on the tag to see all photos tagged with that</p>
+
+{% if u_tags %}
+
+<h4>Your Top Tags</h4>
+<ol>
+{% for tag in u_tags %}
+<li>
+    <form method='post' action="/tag">
+    <button type="submit" name="tag_name" value={{tag[0]}}>{{tag[0]}}</button>
+</form>
+</li>
+
+{% endfor %}
+</ol>
+{% endif %}
+
+{% if pop_tags %}
+
+<h4>Popular Tags</h4>
+<ol>
+{% for tag in pop_tags %}
+<li>
+    <form method='post' action="/tag">
+    <button type="submit" name="tag_name" value={{tag[0]}}>{{tag[0]}}</button>
+</form>
+</li>
+
+{% endfor %}
+</ol>
+{% endif %}
+
 {% if tags %}
+<h4>All Tags</h4>
 <ul>
 {% for tag in tags %}
 <li>
@@ -21,5 +55,7 @@
 {% endfor %}
 </ul>
 {% endif %}
+
+
 
 

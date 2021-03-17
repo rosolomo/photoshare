@@ -246,9 +246,17 @@ def isEmailUnique(email):
 
 # end login code
 # gets the 5 most popular tags per user
-def getTopTags(uid):
+def getTopUserTags(uid):
     cursor = conn.cursor()
-    cursor.execute("select count(t.tag_id) as total from (select t.tag_id from Tagged t, Photos p, Users u where t.photo_id = p.photo_id and p.user_id = '{0}') order by total desc limit 5".format(uid))
+    cursor.execute(
+    "select tot.name, count(tot.tag_id) from (select R.name, t.tag_id from Tagged t, Photos p, Tags R WHERE t.photo_id = p.photo_id AND t.tag_id = R.tag_id and p.user_id = '{0}') as tot GROUP by R.name order by count(tot.tag_id) desc limit 5".format(uid))
+    return cursor.fetchall()
+
+
+def getTopTags():
+    cursor = conn.cursor()
+    cursor.execute(
+        "select tot.name, count(tot.tag_id) from (select R.name, t.tag_id from Tagged t, Photos p, Tags R WHERE t.photo_id = p.photo_id AND t.tag_id = R.tag_id) as tot GROUP by R.name order by count(tot.tag_id) desc limit 5".format())
     return cursor.fetchall()
 
 def howmanytags(photo,uid):
@@ -427,7 +435,8 @@ def getName(uid, key="user_id", value="first_name", table="Users"):
             flask_login.current_user.id, key, value, table
         )
     )
-    return cursor.fetchone()[0]
+    result = cursor.fetchone()
+    return result
 
 
 # All photos
@@ -491,7 +500,15 @@ def getTags():
     cursor.execute(
         "SELECT name FROM Tags".format())
     tags = cursor.fetchall()
-    return render_template("tags.html",tags=tags)
+    popular_tags = getTopTags()
+    uname = ""
+
+    if flask_login.current_user.is_authenticated:
+        uid = flask_login.current_user.id
+        utags = getTopUserTags(uid)
+        uname = getName(uid)
+
+    return render_template("tags.html",tags=tags,pop_tags = popular_tags,u_tags=utags, name=uname)
 
 @app.route("/photoSearch", methods=["GET", "POST"])
 # @flask_login.login_required
@@ -507,6 +524,7 @@ def search1():
 
     if flask_login.current_user.is_authenticated:
         uid = flask_login.current_user.id
+        utags = getTopUserTags(uid)
         uname = getName(uid)
         cursor.execute(
             "SELECT data, P.photo_id, caption FROM Photos P, Tags T, Tagged R WHERE T.name ='{0}' AND P.user_id='{1}' AND T.tag_id = R.tag_id AND P.photo_id=R.photo_id".format(search_text, uid))
