@@ -245,6 +245,26 @@ def isEmailUnique(email):
 
 
 # end login code
+# gets the 5 most popular tags per user
+def getTopTags(uid):
+    cursor = conn.cursor()
+    cursor.execute("select count(t.tag_id) as total from (select t.tag_id from Tagged t, Photos p, Users u where t.photo_id = p.photo_id and p.user_id = '{0}') order by total desc limit 5".format(uid))
+    return cursor.fetchall()
+
+def howmanytags(photo,uid):
+    cursor = conn.cursor()
+    cursor.execute("Select photo_id from Photos")
+    photos = cursor.fetchall()
+    for i in range(len(photos)):
+        total_tags = 0
+        toptags = getTopTags(uid)
+        for toptag in toptags:
+            # if the photo has that tag
+            if not cursor.execute("select tag_id from Tagged where tag_id = '{0}' and photo_id = '{1}'".format(toptag, photo[i])):
+                total_tags += 1
+    return total_tags
+
+def getphotoarray():
 
 
 @app.route("/profile")
