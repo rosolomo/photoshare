@@ -4,9 +4,10 @@
 
 {% if name %}
 <h1>Hello {{ name }}!</h1>
-<h2>Here are your friends</h2>
 {% endif %}
-
+{% if message %}
+<h2>{{message}}</h2>
+{% endif%}
 {% if friends %}
 <h2>Here are your friends</h2>
 <ul>
