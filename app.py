@@ -393,10 +393,11 @@ def add_friend():
     friends = cursor.fetchall()
     return render_template("friends.html", name=first, friends=friends)
 
-def getName(uid,key="user_id",value="first_name",table="Users"):
+
+def getName(uid, key="user_id", value="first_name", table="Users"):
     cursor.execute(
         "SELECT {2} FROM {3} WHERE {1} = '{0}'".format(
-            flask_login.current_user.id, key,value, table
+            flask_login.current_user.id, key, value, table
         )
     )
     return cursor.fetchone()[0]
@@ -412,8 +413,8 @@ def getAllPhotos():
 
     userPhotos = ""
     uname = ""
-    
-    if (flask_login.current_user.is_authenticated):
+
+    if flask_login.current_user.is_authenticated:
         uid = flask_login.current_user.id
         uname = getName(uid)
         userPhotos = getUsersPhotos(uid)
@@ -445,13 +446,8 @@ def search():
         return render_template("commentsearch.html", searched=searched, results=0)
     return render_template("commentsearch.html", searched=searched, results=results)
 
-    if len(allPhotos)>0:
-        return render_template("photos.html",name=uname, photos=allPhotos, myPhotos= userPhotos)
 
-    return render_template("photos.html",name=uname, photos = "")
-
-
-#Albums
+# Albums
 def getPhotosInAlbums(aid):
     cursor = conn.cursor()
     cursor.execute(
@@ -459,28 +455,55 @@ def getPhotosInAlbums(aid):
     )
     return cursor.fetchall()
 
+
 @app.route("/albums", methods=["GET", "POST"])
 # @flask_login.login_required
 def getAllAblums():
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT name, albums_id, user_id FROM Albums".format()
-    )
+    cursor.execute("SELECT name, albums_id, user_id FROM Albums".format())
     allAblums = cursor.fetchall()  # NOTE list of tuples, [(imgdata, pid), ...]
-    allAlbumPhotos = [(x[0],getPhotosInAlbums(x[1])) for x in allAblums]
+    allAlbumPhotos = [(x[0], getPhotosInAlbums(x[1])) for x in allAblums]
     userAlbums = ""
-    uname = "" 
-    
-    if (flask_login.current_user.is_authenticated):
+    uname = ""
+
+    if flask_login.current_user.is_authenticated:
         uid = flask_login.current_user.id
         uname = getName(uid)
         userAlbums = getUsersAlbums(uid)
         userAlbumsPhotos = [(x[0], getPhotosInAlbums(x[1])) for x in userAlbums]
 
     if len(allAblums) > 0:
-        return render_template("albums.html", name=uname, albums=allAlbumPhotos, myAlbums=userAlbumsPhotos)
+        return render_template(
+            "albums.html", name=uname, albums=allAlbumPhotos, myAlbums=userAlbumsPhotos
+        )
 
     return render_template("albums.html", name=uname, albums="")
+
+
+@app.route("/liked", methods=["GET", "POST"])
+def see_likes():
+    photoid = int(request.args.get("photoid"))
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT u.email from Users u WHERE u.user_id IN (SELECT user_id FROM Likes Where photo_id = '{0}')".format(
+            photoid
+        )
+    )
+    likers = cursor.fetchall()
+    message = "You have already liked this picture"
+    print("liker = ", likers)
+    if cursor.execute("Select user_id FROM Likes where photo_id = '{0}' and user_id = '{1}' ".format(photoid, flask_login.current_user.id)):
+        cursor.execute("Insert into Likes (photo_id, user_id) Values (%s,%s)",(photoid, flask_login.current_user.id) )
+        message = "Thanks for liking this picture"
+    cursor.execute(
+        "SELECT Count(user_id) FROM Likes Where photo_id = '{0}'".format(photoid)
+    )
+    num_likes = cursor.fetchone()
+    return render_template(
+        "liked.html", photoid=photoid, likers=likers, num_likes=num_likes, message = message
+    )
+
+
 # default page
 @app.route("/", methods=["GET"])
 def hello():

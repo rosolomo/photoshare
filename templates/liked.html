@@ -1,0 +1,17 @@
+<!doctype html>
+
+<title>Likes</title>
+<h2>Total number of likes {{num_likes[0]}}</h2>
+<h4>{{message}}</h4>
+<h4>Who liked this?</h4>
+<ul>
+    {% for liker in likers %}
+    <li>{{liker[0]}}</li>
+    {% endfor %}
+</ul>
+<ul>
+    <li><a href='/profile'>Profile</a></li>
+    <li><a href='/upload'>Upload a photo</a> </li>
+    <li><a href='/logout'>Logout</a></li>
+    <li><a href='/'>Home</a></li>
+</ul>
