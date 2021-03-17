@@ -34,7 +34,7 @@
 {% for tag in pop_tags %}
 <li>
     <form method='post' action="/tag">
-    <button type="submit" name="tag_name" value={{tag[0]}}>{{tag[0]}}</button>
+    <button type="submit" name="tag_name" value={{tag[0]}}>{{tag[0]}}: {{tag[1]}}</button>
 </form>
 </li>
 

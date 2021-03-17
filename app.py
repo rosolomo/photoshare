@@ -12,7 +12,7 @@
 import flask
 from flask import Flask, Response, request, render_template, redirect, url_for
 from flaskext.mysql import MySQL
-# from config import password
+from config import password
 import flask_login
 from datetime import date
 
@@ -25,8 +25,8 @@ app.secret_key = "super secret string"  # Change this!
 
 # These will need to be changed according to your creditionals
 app.config["MYSQL_DATABASE_USER"] = "root"
-# app.config["MYSQL_DATABASE_PASSWORD"] = password()
-app.config["MYSQL_DATABASE_PASSWORD"] = "2200!MRpip"
+app.config["MYSQL_DATABASE_PASSWORD"] = password()
+# app.config["MYSQL_DATABASE_PASSWORD"] = "2200!MRpip"
 app.config["MYSQL_DATABASE_DB"] = "photoshare"
 app.config["MYSQL_DATABASE_HOST"] = "localhost"
 mysql.init_app(app)
@@ -574,33 +574,50 @@ def getTags():
 # @flask_login.login_required
 def search1():
     searched = str(request.form.get("photoSearch"))
-    search_text = "%" + searched + "%"
-    print("search text = ", search_text)
-    cursor = conn.cursor()
-    results = tag_results(search_text)
-
+    print(type(searched))
+    breakpoint
+    multiSearch = searched.split()
+    results = []
+    if len(multiSearch)>1:
+        search_text = ["%" + x + "%" for x in multiSearch]
+        print("search text = ", search_text)
+        cursor = conn.cursor()
+        for t in search_text:
+            if t not in results:
+                results.append(tag_results(t))
+        print("ressss",results)
+    else:    
+        search_text = ["%" + searched + "%"]
+        print("search text = ", search_text)
+        cursor = conn.cursor()
+        results = [tag_results(search_text[0])]
+        
     usersResults = ""
     uname = ""
 
     if flask_login.current_user.is_authenticated:
+        usersResults=[]
         uid = flask_login.current_user.id
         utags = getTopUserTags(uid)
         uname = getName(uid)
-        cursor.execute(
-            "SELECT data, P.photo_id, caption FROM Photos P, Tags T, Tagged R WHERE T.name ='{0}' AND P.user_id='{1}' AND T.tag_id = R.tag_id AND P.photo_id=R.photo_id".format(
-                search_text, uid
+        for i in range(len(search_text)):
+            cursor.execute(
+                "SELECT data, P.photo_id, caption FROM Photos P, Tags T, Tagged R WHERE T.name ='{0}' AND P.user_id='{1}' AND T.tag_id = R.tag_id AND P.photo_id=R.photo_id".format(
+                    search_text[i], uid
+                )
             )
-        )
-        usersResults = cursor.fetchall()
+            usersResults.append(cursor.fetchall())
 
     print("results = ", results)
+    print("wwresults = ", usersResults)
+
     print("lenresults = ", len(results))
     if len(results) == 0:
         return render_template(
             "photoSearch.html", searched=searched, name=uname, photos=0
         )
     return render_template(
-        "photosSearch.html",
+        "photoSearch.html",
         searched=searched,
         name=uname,
         photos=results,
