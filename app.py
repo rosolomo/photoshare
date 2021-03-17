@@ -14,6 +14,7 @@ from flask import Flask, Response, request, render_template, redirect, url_for
 from flaskext.mysql import MySQL
 from config import password
 import flask_login
+from datetime import date
 
 # for image uploading
 import os, base64
@@ -142,7 +143,6 @@ def register():
 @app.route("/register", methods=["POST"])
 def register_user():
     # tests to see if all required fields (first,last names, password, email, dob) were filled
-    # for optional field, only bday gives problems if empty
     try:
         email = request.form.get("email")
         password = request.form.get("password")
@@ -248,22 +248,30 @@ def isEmailUnique(email):
 # gets the 5 most popular tags per user
 def getTopTags(uid):
     cursor = conn.cursor()
-    cursor.execute("select count(t.tag_id) as total from (select t.tag_id from Tagged t, Photos p, Users u where t.photo_id = p.photo_id and p.user_id = '{0}') order by total desc limit 5".format(uid))
+    cursor.execute(
+        "select count(t.tag_id) as total from (select t.tag_id from Tagged t, Photos p, Users u where t.photo_id = p.photo_id and p.user_id = '{0}') order by total desc limit 5".format(
+            uid
+        )
+    )
     return cursor.fetchall()
 
-def howmanytags(photo,uid):
+
+def howmanytags(photo, uid):
     cursor = conn.cursor()
-    cursor.execute("Select photo_id from Photos")
+    cursor.execute("Select photo_id from Photos where user_id <> {0}")
     photos = cursor.fetchall()
     for i in range(len(photos)):
         total_tags = 0
         toptags = getTopTags(uid)
         for toptag in toptags:
             # if the photo has that tag
-            if not cursor.execute("select tag_id from Tagged where tag_id = '{0}' and photo_id = '{1}'".format(toptag, photo[i])):
+            if not cursor.execute(
+                "select tag_id from Tagged where tag_id = '{0}' and photo_id = '{1}'".format(
+                    toptag, photo[i]
+                )
+            ):
                 total_tags += 1
     return total_tags
-
 
 
 @app.route("/profile")
@@ -304,6 +312,9 @@ def upload_file():
         imgfile = request.files["photo"]
         caption = request.form.get("caption")
         albums_name = request.form.get("album")
+        taglist = request.form.get("tags")
+        tags = taglist.split()
+
         photo_data = base64.b64encode(imgfile.read())
         cursor.execute("SELECT MAX(photo_id) FROM Photos")
 
@@ -314,8 +325,7 @@ def upload_file():
             photo_id = 0
 
         # if the user doesn't own an album of that name, create a new one
-        if not cursor.execute(
-            "SELECT albums_id FROM albums WHERE name = '{0}' and user_id = '{1}'".format(
+        if not cursor.execute("SELECT albums_id FROM albums WHERE name = '{0}' and user_id = '{1}'".format(
                 albums_name, uid
             )
         ):
@@ -325,9 +335,10 @@ def upload_file():
                 albums_id = id_value + 1
             else:
                 albums_id = 0
+            creation_date = date.today()
             cursor.execute(
-                "INSERT INTO Albums (albums_id, user_id, name) VALUES (%s, %s, %s)",
-                (albums_id, uid, albums_name),
+                "INSERT INTO Albums (albums_id, user_id, name, date) VALUES (%s, %s, %s, %s)",
+                (albums_id, uid, albums_name, creation_date),
             )
             conn.commit()
 
@@ -342,6 +353,31 @@ def upload_file():
             (photo_data, uid, caption, photo_id, albums_id),
         )
         conn.commit()
+
+        for tag in tags:
+            # if tag doesn't exist, add to Tags
+            if not cursor.execute(
+                "Select tag_id from Tags where name = '{0}'".format(tag)
+            ):
+                cursor.execute("SELECT MAX(tag_id) FROM Tags")
+                id_value = cursor.fetchone()[0]
+                if id_value is not None:
+                    tag_id = id_value + 1
+                else:
+                    tag_id = 0
+                cursor.execute(
+                    "INSERT INTO Tags (tag_id, name) Values (%s, %s)", (tag_id, tag)
+                )
+                conn.commit()
+            else:
+                cursor.execute("Select tag_id from Tags where name = '{0}'".format(tag))
+                tag_id = cursor.fetchone()[0]
+            cursor.execute(
+                "INSERT INTO Tagged (tag_id,photo_id) Values (%s, %s)",
+                (tag_id, photo_id),
+            )
+            conn.commit()
+
         return render_template(
             "hello.html",
             name=flask_login.current_user.id,
@@ -453,6 +489,29 @@ def getAllPhotos():
 
     return render_template("photos.html", name=uname, photos="")
 
+@app.route("/comments", methods=["GET", "POST"])
+def add_comments():
+    cursor = conn.cursor()
+    comment = request.args.get("comment")
+    photoid = int(request.args.get("photoid"))
+    if cursor.execute("SELECT user_id FROM Photos WHERE photo_id = '{0}' and user_id = '{1}'".format(photoid ,flask_login.current_user.id)):
+        return render_template("comments.html", message= "Can not comment on own photo")
+    else:
+        cursor.execute("SELECT MAX(comment_id) FROM comments")
+        id_value = cursor.fetchone()[0]
+        if id_value is not None:
+            comment_id = id_value + 1
+        else:
+            comment_id = 0
+        comment_date = date.today()
+        cursor.execute(
+            "INSERT INTO Comments (comment_id, text, user_id, photo_id, date) Values (%s, %s,%s,%s,%s)", (comment_id, comment, flask_login.current_user.id, photoid, comment_date)
+        )
+        conn.commit()
+        cursor.execute("Select u.email, c.text From Comments c, Users u Where c.photo_id = '{0}' and u.user_id = c.user_id".format(photoid))
+        comments = cursor.fetchall()
+        print("commets = ",comments)
+        return render_template("comments.html", comments= comments) 
 
 @app.route("/commentsearch", methods=["GET", "POST"])
 @flask_login.login_required
@@ -473,25 +532,30 @@ def search():
         return render_template("commentsearch.html", searched=searched, results=0)
     return render_template("commentsearch.html", searched=searched, results=results)
 
+
 def tag_results(text):
     cursor.execute(
-        "SELECT data, P.photo_id, caption FROM Photos P, Tags T, Tagged R WHERE T.name ='{0}' AND T.tag_id = R.tag_id AND P.photo_id=R.photo_id".format(text))
+        "SELECT data, P.photo_id, caption FROM Photos P, Tags T, Tagged R WHERE T.name ='{0}' AND T.tag_id = R.tag_id AND P.photo_id=R.photo_id".format(
+            text
+        )
+    )
     return cursor.fetchall()
 
-@app.route("/tag", methods=["GET","POST"])
+
+@app.route("/tag", methods=["GET", "POST"])
 def taggedPhotos():
     name = str(request.form.get("tag_name"))
     # print(name)
     results = tag_results(name)
-    return render_template("photoSearch.html", searched=name,  photos=results)
+    return render_template("photoSearch.html", searched=name, photos=results)
 
 
-@app.route("/tags", methods=["GET","POST"])
+@app.route("/tags", methods=["GET", "POST"])
 def getTags():
-    cursor.execute(
-        "SELECT name FROM Tags".format())
+    cursor.execute("SELECT name FROM Tags".format())
     tags = cursor.fetchall()
-    return render_template("tags.html",tags=tags)
+    return render_template("tags.html", tags=tags)
+
 
 @app.route("/photoSearch", methods=["GET", "POST"])
 # @flask_login.login_required
@@ -500,7 +564,7 @@ def search1():
     search_text = "%" + searched + "%"
     print("search text = ", search_text)
     cursor = conn.cursor()
-    results=tag_results(search_text)
+    results = tag_results(search_text)
 
     usersResults = ""
     uname = ""
@@ -509,15 +573,27 @@ def search1():
         uid = flask_login.current_user.id
         uname = getName(uid)
         cursor.execute(
-            "SELECT data, P.photo_id, caption FROM Photos P, Tags T, Tagged R WHERE T.name ='{0}' AND P.user_id='{1}' AND T.tag_id = R.tag_id AND P.photo_id=R.photo_id".format(search_text, uid))
+            "SELECT data, P.photo_id, caption FROM Photos P, Tags T, Tagged R WHERE T.name ='{0}' AND P.user_id='{1}' AND T.tag_id = R.tag_id AND P.photo_id=R.photo_id".format(
+                search_text, uid
+            )
+        )
         usersResults = cursor.fetchall()
-
 
     print("results = ", results)
     print("lenresults = ", len(results))
     if len(results) == 0:
-        return render_template("photoSearch.html", searched=searched, name=uname, photos=0)
-    return render_template("photosSearch.html", searched=searched, name=uname, photos=results, myPhotos = usersResults)
+        return render_template(
+            "photoSearch.html", searched=searched, name=uname, photos=0
+        )
+    return render_template(
+        "photosSearch.html",
+        searched=searched,
+        name=uname,
+        photos=results,
+        myPhotos=usersResults,
+    )
+
+
 # Albums
 def getPhotosInAlbums(aid):
     cursor = conn.cursor()
@@ -563,19 +639,23 @@ def see_likes():
     likers = cursor.fetchall()
     message = "You have already liked this picture"
     print("liker = ", likers)
-    if cursor.execute(
+    # if cursor.execute = 0 (haven't liked this) insert 
+    if not cursor.execute(
         "Select user_id FROM Likes where photo_id = '{0}' and user_id = '{1}' ".format(
             photoid, flask_login.current_user.id
         )
     ):
-        cursor.execute(
-            "Insert into Likes (photo_id, user_id) Values (%s,%s)",
-            (photoid, flask_login.current_user.id),
-        )
+        cursor.execute( "Insert into Likes (photo_id, user_id) Values (%s,%s)",
+                (photoid, flask_login.current_user.id),
+            )
+        print("userid = ", flask_login.current_user.id)
+        print("inside if statment")
         message = "Thanks for liking this picture"
-    cursor.execute(
-        "SELECT Count(user_id) FROM Likes Where photo_id = '{0}'".format(photoid)
-    )
+    # else
+    
+    conn.commit()
+
+    cursor.execute("SELECT Count(user_id) FROM Likes Where photo_id = '{0}'".format(photoid))
     num_likes = cursor.fetchone()
     return render_template(
         "liked.html",

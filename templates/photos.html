@@ -31,13 +31,15 @@
         <table>
             <tr>
                 <td>{{photo[2]}}
+                    <form action="/liked" method="get">
+                        <input type="hidden" id="photoid" name="photoid" value={{ photo[1] }}>
+                        <button type="submit">Like</button>
+                    </form>
                 </td>
             </tr>
             <tr>
                 <td><img src='data:image/jpg;base64, {{ photo[0] }}' /></td>
-                
             </tr>
-            <a href='/liked?' + str({{photo[2]}})></a>
             {% endfor %}
         </table>
     </ul>
@@ -54,14 +56,19 @@
     <h2>Here are all photos</h2>
     <ul>
 
-    {% for photo in photos %}
+        {% for photo in photos %}
         <table>
             <tr>
                 <td>{{photo[2]}}
                     <form action="/liked" method="get">
-                <input type="hidden" id="photoid" name="photoid" value={{ photo[1] }}>
-                <button type="submit">Like</button>
-            </form>
+                        <input type="hidden" id="photoid" name="photoid" value={{ photo[1] }}>
+                        <button type="submit">Like</button>
+                    </form>
+                    <form action="/comments" method="get">
+                        <input type="hidden" id="photoid" name="photoid" value={{ photo[1] }}>
+                        <input type="text" id="comment" name="comment" placeholder="Your comment" required="true">
+                        <button type="submit">Comment</button>
+                    </form>
                 </td>
 
             </tr>
